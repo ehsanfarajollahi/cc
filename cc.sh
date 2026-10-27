@@ -232,13 +232,18 @@ add_to_log() {
     if [ -z "${log_entries["$dir"]}" ]; then
         echo "$dir" >> "$DIR_PATHS_LOG"
         log_entries["$dir"]=1
-        [ "$DEBUG" = true ] && echo "Added to log: $dir"
+        if [ "$DEBUG" = true ]; then
+            echo "Added to log: $dir"
+        fi
     fi
+    return 0
 }
 
 _remove_log_entry() {
     local target="${1:-}"
     local tmp line count selected
+    local removed_count=0
+    local -a removed_entries=()
 
     if [[ -z "$target" ]]; then
         if [[ ! -s "$DIR_PATHS_LOG" ]]; then
@@ -257,26 +262,36 @@ _remove_log_entry() {
         target="$selected"
     elif [[ "$target" == "." ]]; then
         target=$(realpath ".") || return 1
-    elif [[ -d "$target" ]]; then
-        target=$(realpath "$target") || return 1
-    fi
-
-    if [[ -z "${log_entries["$target"]+_}" ]]; then
-        echo "Directory record not found: $target" >&2
-        return 1
+    else
+        target=$(realpath -m -- "$target") || return 1
     fi
 
     tmp=$(mktemp "${DIR_PATHS_LOG}.tmp.XXXXXX") || return 1
     while IFS= read -r line; do
-        [[ "$line" == "$target" ]] || printf '%s\n' "$line"
+        if [[ "$line" == "$target" ||
+              ( "$target" == "/" && "$line" == /* ) ||
+              ( "$target" != "/" && "$line" == "$target/"* ) ]]; then
+            removed_entries+=("$line")
+            (( removed_count++ ))
+        else
+            printf '%s\n' "$line"
+        fi
     done < "$DIR_PATHS_LOG" > "$tmp"
+
+    if (( removed_count == 0 )); then
+        rm -f "$tmp"
+        echo "No directory records found under: $target" >&2
+        return 1
+    fi
     if ! cat "$tmp" > "$DIR_PATHS_LOG"; then
         rm -f "$tmp"
         return 1
     fi
     rm -f "$tmp"
-    unset "log_entries[$target]"
-    echo "Directory record removed: $target"
+    for line in "${removed_entries[@]}"; do
+        unset "log_entries[$line]"
+    done
+    echo "Removed $removed_count directory record(s): $target"
 }
 
 # Function to find current workspace root for a directory
