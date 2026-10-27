@@ -184,7 +184,7 @@ _cc_install() {
 
 _cc_update() {
     local source_path tmp
-    local url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/main/cc.sh"
+    local url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/main/cc.sh?cache=$(date +%s)"
 
     source_path="$_CC_SCRIPT_PATH"
     tmp=$(mktemp "${source_path}.update.XXXXXX") || return 1
@@ -204,8 +204,8 @@ _cc_update() {
         return 1
     }
 
-    if [[ ! -s "$tmp" ]] || ! bash -n "$tmp"; then
-        echo "Downloaded cc.sh is empty or invalid; keeping the current version." >&2
+    if [[ ! -s "$tmp" ]] || ! bash -n "$tmp" || ! grep -Fq '_cc_update()' "$tmp"; then
+        echo "Downloaded cc.sh is empty, invalid, or missing the updater; keeping the current version." >&2
         rm -f "$tmp"
         return 1
     fi
