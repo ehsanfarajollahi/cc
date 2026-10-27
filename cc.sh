@@ -524,7 +524,7 @@ cc() {
                     label="[${workspace_names["$candidate_ws"]}]"
                 else
                     rank=0
-                    label="[other]"
+                    label="[${workspace_names["$candidate_ws"]}]"
                 fi
             else
                 group=""
@@ -562,10 +562,10 @@ cc() {
             selected=$(
                 printf '%s\n' "${candidate_records[@]}" |
                     LC_ALL=C sort -t $'\t' -k3,3nr -k5,5 |
-                    cut -f5- |
-                    fzf --height "$fzf_height" --prompt="Select directory: "
+                    fzf --height "$fzf_height" --delimiter=$'\t' --with-nth=4 \
+                        --prompt="Select directory: "
             )
-            choice="$selected"
+            choice="${selected##*$'\t'}"
         else
             selected=$(
                 printf '%s\n' "${candidate_records[@]}" |
