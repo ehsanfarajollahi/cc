@@ -236,6 +236,49 @@ add_to_log() {
     fi
 }
 
+_remove_log_entry() {
+    local target="${1:-}"
+    local tmp line count selected
+
+    if [[ -z "$target" ]]; then
+        if [[ ! -s "$DIR_PATHS_LOG" ]]; then
+            echo "No directory records found." >&2
+            return 1
+        fi
+        count=$(sort -u "$DIR_PATHS_LOG" | wc -l)
+        selected=$(
+            sort -u "$DIR_PATHS_LOG" |
+                fzf --height "$(( count + 2 ))" --prompt="Remove directory: "
+        )
+        [[ -n "$selected" ]] || {
+            echo "No directory selected"
+            return 1
+        }
+        target="$selected"
+    elif [[ "$target" == "." ]]; then
+        target=$(realpath ".") || return 1
+    elif [[ -d "$target" ]]; then
+        target=$(realpath "$target") || return 1
+    fi
+
+    if [[ -z "${log_entries["$target"]+_}" ]]; then
+        echo "Directory record not found: $target" >&2
+        return 1
+    fi
+
+    tmp=$(mktemp "${DIR_PATHS_LOG}.tmp.XXXXXX") || return 1
+    while IFS= read -r line; do
+        [[ "$line" == "$target" ]] || printf '%s\n' "$line"
+    done < "$DIR_PATHS_LOG" > "$tmp"
+    if ! cat "$tmp" > "$DIR_PATHS_LOG"; then
+        rm -f "$tmp"
+        return 1
+    fi
+    rm -f "$tmp"
+    unset "log_entries[$target]"
+    echo "Directory record removed: $target"
+}
+
 # Function to find current workspace root for a directory
 get_workspace_root() {
     local dir="$1"
@@ -413,6 +456,15 @@ cc() {
         return
     fi
 
+    if [[ "$target" == "remove" ]]; then
+        if (( $# > 2 )); then
+            echo "Usage: cc remove [path|.]" >&2
+            return 1
+        fi
+        _remove_log_entry "${2:-}"
+        return
+    fi
+
     if [[ "$target" == "-" ]]; then
         local root
         root=$(get_workspace_root "$(pwd)")
@@ -544,9 +596,16 @@ if [[ $- == *i* ]]; then
 
     _cc_autocomplete() {
         local cur=${COMP_WORDS[COMP_CWORD]}
+        local -a command_matches directory_matches
 
-        if (( COMP_CWORD == 1 )) && [[ "$cur" == -* ]]; then
-            mapfile -t COMPREPLY < <(compgen -W "--install --update" -- "$cur")
+        if (( COMP_CWORD == 1 )); then
+            if [[ "$cur" == -* ]]; then
+                mapfile -t COMPREPLY < <(compgen -W "--install --update" -- "$cur")
+            else
+                mapfile -t command_matches < <(compgen -W "remove" -- "$cur")
+                mapfile -t directory_matches < <(compgen -d -- "$cur")
+                COMPREPLY=("${command_matches[@]}" "${directory_matches[@]}")
+            fi
         else
             mapfile -t COMPREPLY < <(compgen -d -- "$cur")
         fi
