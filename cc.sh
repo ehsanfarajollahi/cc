@@ -183,42 +183,23 @@ _cc_install() {
 }
 
 _cc_update() {
-    local source_path tmp metadata commit_sha url downloader
+    local source_path tmp
     local current_checksum downloaded_checksum downloaded_size ignored
-    local api_url="https://api.github.com/repos/ehsanfarajollahi/cc/commits/main?cache=$(date +%s%N)"
+    local url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/refs/heads/main/cc.sh"
 
     source_path="$_CC_SCRIPT_PATH"
     tmp=$(mktemp "${source_path}.update.XXXXXX") || return 1
 
+    echo "Downloading the latest cc.sh from GitHub..."
     if command -v curl >/dev/null 2>&1; then
-        downloader="curl"
-        metadata=$(curl -fsSL "$api_url")
+        curl -fsSL -H "Cache-Control: no-cache" -H "Pragma: no-cache" \
+            "$url" -o "$tmp"
     elif command -v wget >/dev/null 2>&1; then
-        downloader="wget"
-        metadata=$(wget -qO- "$api_url")
+        wget --no-cache -qO "$tmp" "$url"
     else
         echo "Updating requires curl or wget." >&2
         rm -f "$tmp"
         return 1
-    fi || {
-        echo "Unable to query the latest GitHub commit." >&2
-        rm -f "$tmp"
-        return 1
-    }
-
-    commit_sha=$(awk -F '"' '$2 == "sha" { print $4; exit }' <<< "$metadata")
-    if [[ ! "$commit_sha" =~ ^[0-9a-f]{40}$ ]]; then
-        echo "GitHub returned an invalid commit identifier." >&2
-        rm -f "$tmp"
-        return 1
-    fi
-    url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/$commit_sha/cc.sh"
-
-    echo "Downloading cc.sh from GitHub commit ${commit_sha:0:12}..."
-    if [[ "$downloader" == "curl" ]]; then
-        curl -fsSL "$url" -o "$tmp"
-    else
-        wget -qO "$tmp" "$url"
     fi || {
         echo "Unable to download $url." >&2
         rm -f "$tmp"
