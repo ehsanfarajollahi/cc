@@ -184,6 +184,7 @@ _cc_install() {
 
 _cc_update() {
     local source_path tmp
+    local current_checksum downloaded_checksum downloaded_size ignored
     local url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/main/cc.sh?cache=$(date +%s)"
 
     source_path="$_CC_SCRIPT_PATH"
@@ -209,9 +210,13 @@ _cc_update() {
         rm -f "$tmp"
         return 1
     fi
+
+    read -r current_checksum ignored ignored < <(cksum "$source_path")
+    read -r downloaded_checksum downloaded_size ignored < <(cksum "$tmp")
+    echo "Downloaded $downloaded_size bytes (checksum $downloaded_checksum)."
     if cmp -s "$source_path" "$tmp"; then
         rm -f "$tmp"
-        echo "cc.sh is already up to date."
+        echo "Result: no changes; the current cc.sh matches the download."
         return 0
     fi
 
@@ -223,7 +228,8 @@ _cc_update() {
         rm -f "$tmp"
         return 1
     }
-    echo "cc.sh updated. Run: source \"$HOME/.bashrc\""
+    echo "Result: updated $source_path ($current_checksum -> $downloaded_checksum)."
+    echo "Reload with: source \"$HOME/.bashrc\""
 }
 
 # Function to add to log
