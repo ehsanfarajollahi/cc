@@ -184,7 +184,7 @@ _cc_install() {
 
 _cc_update() {
     local source_path tmp metadata commit_sha url downloader
-    local current_checksum downloaded_checksum downloaded_size ignored
+    local current_checksum downloaded_checksum ignored
     local feed_url="https://github.com/ehsanfarajollahi/cc/commits/main.atom?cache=$(date +%s%N)"
 
     source_path="$_CC_SCRIPT_PATH"
@@ -214,7 +214,6 @@ _cc_update() {
     fi
     url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/$commit_sha/cc.sh"
 
-    echo "Downloading cc.sh from GitHub commit ${commit_sha:0:12}..."
     if [[ "$downloader" == "curl" ]]; then
         curl -fsSL "$url" -o "$tmp"
     else
@@ -232,8 +231,8 @@ _cc_update() {
     fi
 
     read -r current_checksum ignored ignored < <(cksum "$source_path")
-    read -r downloaded_checksum downloaded_size ignored < <(cksum "$tmp")
-    echo "Downloaded $downloaded_size bytes (checksum $downloaded_checksum)."
+    read -r downloaded_checksum ignored ignored < <(cksum "$tmp")
+    echo "(checksum $downloaded_checksum) Downloaded cc.sh from GitHub commit ${commit_sha:0:12}."
     if cmp -s "$source_path" "$tmp"; then
         rm -f "$tmp"
         echo "Result: no changes; the current cc.sh matches the download."
