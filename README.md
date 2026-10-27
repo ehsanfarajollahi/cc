@@ -16,6 +16,7 @@ source ~/.bashrc
 ```bash
 cc <name>                  # Jump to a matching logged directory
 cc -                       # Jump to the current workspace root, or home
+cc --help                  # Show all commands and data files
 cc --remove [path|.]       # Collapse a path and descendants to its parent
 cc --update                # Download and install the latest cc.sh
 cc --ws                    # Select a workspace

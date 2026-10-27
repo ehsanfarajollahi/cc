@@ -494,9 +494,49 @@ _cc_workspace() {
 }
 
 
+_cc_help() {
+    cat <<'EOF'
+cc — fuzzy directory navigation with named workspaces
+
+Usage:
+  cc                         Go to your home directory
+  cc <directory>             Go directly to an existing directory
+  cc <query>                 Find a logged directory
+  cc -                       Go to the current workspace root, or home
+
+Records:
+  cc --remove                Select a logged path to collapse
+  cc --remove <path|.>       Collapse that path and descendants to its parent
+
+Workspaces:
+  cc --ws                    Select a workspace
+  cc --ws add <dir> [name]   Add a named workspace; prompts when name is omitted
+  cc --ws remove [path|name] Remove directly, or select a workspace
+  cc --ws -                  Go to the current workspace root
+
+Maintenance:
+  cc --install               Install fzf and configure Bash
+  cc --update                Download the latest cc.sh from GitHub
+  cc --help                  Show this help
+
+Data:
+  ~/.cc_cd_log               Logged directories
+  ~/.cc_ws                   Named workspaces
+EOF
+}
+
 # Main cc function
 cc() {
     local target="$1"
+
+    if [[ "$target" == "--help" ]]; then
+        if (( $# != 1 )); then
+            echo "Usage: cc --help" >&2
+            return 1
+        fi
+        _cc_help
+        return
+    fi
 
     if [[ "$target" == "--install" ]]; then
         if (( $# != 1 )); then
@@ -666,7 +706,7 @@ if [[ $- == *i* ]]; then
         if (( COMP_CWORD == 1 )); then
             if [[ "$cur" == -* ]]; then
                 mapfile -t COMPREPLY < <(
-                    compgen -W "--install --update --remove --ws" -- "$cur"
+                    compgen -W "--help --install --update --remove --ws" -- "$cur"
                 )
             else
                 mapfile -t COMPREPLY < <(compgen -d -- "$cur")
@@ -683,7 +723,7 @@ if [[ $- == *i* ]]; then
 
         COMPREPLY=()
         if (( COMP_CWORD == 1 )); then
-            mapfile -t COMPREPLY < <(compgen -W "--install --update" -- "$cur")
+            mapfile -t COMPREPLY < <(compgen -W "--help --install --update" -- "$cur")
         fi
     }
 
@@ -694,6 +734,10 @@ fi
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     case "${1:-}" in
+        --help)
+            (( $# == 1 )) || { echo "Usage: $0 --help" >&2; exit 1; }
+            _cc_help
+            ;;
         --install)
             (( $# == 1 )) || { echo "Usage: $0 --install" >&2; exit 1; }
             _cc_install
@@ -703,7 +747,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
             _cc_update
             ;;
         *)
-            echo "Usage: $0 --install | --update" >&2
+            echo "Usage: $0 --help | --install | --update" >&2
             exit 1
             ;;
     esac
