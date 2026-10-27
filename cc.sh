@@ -241,8 +241,9 @@ add_to_log() {
 
 _remove_log_entry() {
     local target="${1:-}"
-    local tmp line count selected
+    local tmp line count selected parent
     local removed_count=0
+    local parent_present=false
     local -a removed_entries=()
 
     if [[ -z "$target" ]]; then
@@ -266,6 +267,8 @@ _remove_log_entry() {
         target=$(realpath -m -- "$target") || return 1
     fi
 
+    parent=$(realpath -m -- "$target/..") || return 1
+
     tmp=$(mktemp "${DIR_PATHS_LOG}.tmp.XXXXXX") || return 1
     while IFS= read -r line; do
         if [[ "$line" == "$target" ||
@@ -275,6 +278,7 @@ _remove_log_entry() {
             (( removed_count++ ))
         else
             printf '%s\n' "$line"
+            [[ "$line" == "$parent" ]] && parent_present=true
         fi
     done < "$DIR_PATHS_LOG" > "$tmp"
 
@@ -282,6 +286,9 @@ _remove_log_entry() {
         rm -f "$tmp"
         echo "No directory records found under: $target" >&2
         return 1
+    fi
+    if [[ "$parent_present" == false ]]; then
+        printf '%s\n' "$parent" >> "$tmp"
     fi
     if ! cat "$tmp" > "$DIR_PATHS_LOG"; then
         rm -f "$tmp"
@@ -291,7 +298,8 @@ _remove_log_entry() {
     for line in "${removed_entries[@]}"; do
         unset "log_entries[$line]"
     done
-    echo "Removed $removed_count directory record(s): $target"
+    log_entries["$parent"]=1
+    echo "Collapsed $removed_count directory record(s) to: $parent"
 }
 
 # Function to find current workspace root for a directory
