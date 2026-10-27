@@ -19,7 +19,6 @@ cc -                       # Jump to the current workspace root, or home
 cc --remove [path|.]       # Collapse a path and descendants to its parent
 cc --update                # Download and install the latest cc.sh
 cc --ws                    # Select a workspace
-cc --ws . [name]           # Add the current directory as a workspace
 cc --ws add <dir> [name]   # Add a workspace
 cc --ws remove <path|name> # Remove a workspace
 cc --ws -                  # Jump to the current workspace root

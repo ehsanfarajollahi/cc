@@ -454,10 +454,6 @@ _cc_workspace() {
         return
     fi
 
-    if [[ "$cmd" == "." ]]; then
-        _add_workspace "$(realpath ".")" "$path"
-        return
-    fi
 
     case "$cmd" in
         add)
@@ -475,7 +471,7 @@ _cc_workspace() {
             _remove_workspace "$path"
             ;;
         *)
-            echo "Usage: cc --ws add <directory> [name] | cc --ws remove <path-or-name> | cc --ws . [name] | cc --ws -"
+            echo "Usage: cc --ws add <directory> [name] | cc --ws remove <path-or-name> | cc --ws -"
             return 1
             ;;
     esac
@@ -660,7 +656,7 @@ if [[ $- == *i* ]]; then
                 mapfile -t COMPREPLY < <(compgen -d -- "$cur")
             fi
         elif (( COMP_CWORD == 2 )) && [[ "${COMP_WORDS[1]}" == "--ws" ]]; then
-            mapfile -t COMPREPLY < <(compgen -W "add remove . -" -- "$cur")
+            mapfile -t COMPREPLY < <(compgen -W "add remove -" -- "$cur")
         else
             mapfile -t COMPREPLY < <(compgen -d -- "$cur")
         fi
