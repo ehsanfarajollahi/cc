@@ -414,7 +414,7 @@ _remove_workspace() {
 }
 
 # Function to handle workspace commands
-ws() {
+_cc_workspace() {
     local cmd="$1"
     local path="$2"
     local name="$3"
@@ -462,20 +462,20 @@ ws() {
     case "$cmd" in
         add)
             if [[ -z "$path" || ! -d "$path" ]]; then
-                echo "Usage: ws add <valid_directory> [name]"
+                echo "Usage: cc --ws add <valid_directory> [name]"
                 return 1
             fi
             _add_workspace "$path" "$name"
             ;;
         remove)
             if [[ -z "$path" ]]; then
-                echo "Usage: ws remove <path-or-name>"
+                echo "Usage: cc --ws remove <path-or-name>"
                 return 1
             fi
             _remove_workspace "$path"
             ;;
         *)
-            echo "Usage: ws add <directory> [name] | ws remove <path-or-name> | ws . [name] | ws -"
+            echo "Usage: cc --ws add <directory> [name] | cc --ws remove <path-or-name> | cc --ws . [name] | cc --ws -"
             return 1
             ;;
     esac
@@ -504,9 +504,15 @@ cc() {
         return
     fi
 
-    if [[ "$target" == "remove" ]]; then
+    if [[ "$target" == "--ws" ]]; then
+        shift
+        _cc_workspace "$@"
+        return
+    fi
+
+    if [[ "$target" == "--remove" ]]; then
         if (( $# > 2 )); then
-            echo "Usage: cc remove [path|.]" >&2
+            echo "Usage: cc --remove [path|.]" >&2
             return 1
         fi
         _remove_log_entry "${2:-}"
@@ -644,16 +650,17 @@ if [[ $- == *i* ]]; then
 
     _cc_autocomplete() {
         local cur=${COMP_WORDS[COMP_CWORD]}
-        local -a command_matches directory_matches
 
         if (( COMP_CWORD == 1 )); then
             if [[ "$cur" == -* ]]; then
-                mapfile -t COMPREPLY < <(compgen -W "--install --update" -- "$cur")
+                mapfile -t COMPREPLY < <(
+                    compgen -W "--install --update --remove --ws" -- "$cur"
+                )
             else
-                mapfile -t command_matches < <(compgen -W "remove" -- "$cur")
-                mapfile -t directory_matches < <(compgen -d -- "$cur")
-                COMPREPLY=("${command_matches[@]}" "${directory_matches[@]}")
+                mapfile -t COMPREPLY < <(compgen -d -- "$cur")
             fi
+        elif (( COMP_CWORD == 2 )) && [[ "${COMP_WORDS[1]}" == "--ws" ]]; then
+            mapfile -t COMPREPLY < <(compgen -W "add remove . -" -- "$cur")
         else
             mapfile -t COMPREPLY < <(compgen -d -- "$cur")
         fi

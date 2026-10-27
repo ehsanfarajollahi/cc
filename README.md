@@ -16,13 +16,13 @@ source ~/.bashrc
 ```bash
 cc <name>                  # Jump to a matching logged directory
 cc -                       # Jump to the current workspace root, or home
-cc remove [path|.]         # Collapse a path and descendants to its parent
+cc --remove [path|.]       # Collapse a path and descendants to its parent
 cc --update                # Download and install the latest cc.sh
-ws                        # Select a workspace
-ws . [name]               # Add the current directory as a workspace
-ws add <directory> [name] # Add a workspace
-ws remove <path-or-name>  # Remove a workspace
-ws -                      # Jump to the current workspace root
+cc --ws                    # Select a workspace
+cc --ws . [name]           # Add the current directory as a workspace
+cc --ws add <dir> [name]   # Add a workspace
+cc --ws remove <path|name> # Remove a workspace
+cc --ws -                  # Jump to the current workspace root
 ```
 
 `cc` stores visited directories in `~/.cc_cd_log` and named workspaces in `~/.cc_ws`.
