@@ -16,6 +16,7 @@ source ~/.bashrc
 ```bash
 cc <name>                 # Jump to a matching logged directory
 cc -                      # Jump to the current workspace root, or home
+cc --update                 # Download and install the latest cc.sh
 ws                        # Select a workspace
 ws . [name]               # Add the current directory as a workspace
 ws add <directory> [name] # Add a workspace

@@ -1,13 +1,21 @@
 #!/bin/bash
 #
 # Install directly with: /path/to/cc.sh --install
-# The same flow is available as `cc --install` after the next shell starts.
+# Update directly with: /path/to/cc.sh --update
+# Both flows are also available through `cc` after the next shell starts.
 
 # Avoid loading the functions and completions more than once.
 if [[ "${BASH_SOURCE[0]}" != "$0" && "${_CC_SH_LOADED:-}" == "1" ]]; then
     return 0
 fi
 _CC_SH_LOADED=1
+_CC_SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}") || {
+    echo "Unable to determine the cc.sh location." >&2
+    if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+        return 1
+    fi
+    exit 1
+}
 
 # Debug variable
 DEBUG=false
@@ -146,7 +154,7 @@ _cc_bashrc_sources_path() {
 _cc_configure_bashrc() {
     local source_path source_path_quoted source_line bashrc
 
-    source_path="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")" || return 1
+    source_path="$_CC_SCRIPT_PATH"
     printf -v source_path_quoted '%q' "$source_path"
     source_line="source $source_path_quoted"
     bashrc="$HOME/.bashrc"
@@ -172,6 +180,50 @@ _cc_install() {
     _cc_install_fzf || return 1
     _cc_configure_bashrc || return 1
     echo "Installation complete. Run: source \"$HOME/.bashrc\""
+}
+
+_cc_update() {
+    local source_path tmp
+    local url="https://raw.githubusercontent.com/ehsanfarajollahi/cc/main/cc.sh"
+
+    source_path="$_CC_SCRIPT_PATH"
+    tmp=$(mktemp "${source_path}.update.XXXXXX") || return 1
+
+    echo "Downloading the latest cc.sh..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$tmp"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO "$tmp" "$url"
+    else
+        echo "Updating requires curl or wget." >&2
+        rm -f "$tmp"
+        return 1
+    fi || {
+        echo "Unable to download $url." >&2
+        rm -f "$tmp"
+        return 1
+    }
+
+    if [[ ! -s "$tmp" ]] || ! bash -n "$tmp"; then
+        echo "Downloaded cc.sh is empty or invalid; keeping the current version." >&2
+        rm -f "$tmp"
+        return 1
+    fi
+    if cmp -s "$source_path" "$tmp"; then
+        rm -f "$tmp"
+        echo "cc.sh is already up to date."
+        return 0
+    fi
+
+    chmod --reference="$source_path" "$tmp" || {
+        rm -f "$tmp"
+        return 1
+    }
+    mv -f -- "$tmp" "$source_path" || {
+        rm -f "$tmp"
+        return 1
+    }
+    echo "cc.sh updated. Run: source \"$HOME/.bashrc\""
 }
 
 # Function to add to log
@@ -352,6 +404,15 @@ cc() {
         return
     fi
 
+    if [[ "$target" == "--update" ]]; then
+        if (( $# != 1 )); then
+            echo "Usage: cc --update" >&2
+            return 1
+        fi
+        _cc_update
+        return
+    fi
+
     if [[ "$target" == "-" ]]; then
         local root
         root=$(get_workspace_root "$(pwd)")
@@ -485,7 +546,7 @@ if [[ $- == *i* ]]; then
         local cur=${COMP_WORDS[COMP_CWORD]}
 
         if (( COMP_CWORD == 1 )) && [[ "$cur" == -* ]]; then
-            mapfile -t COMPREPLY < <(compgen -W "--install" -- "$cur")
+            mapfile -t COMPREPLY < <(compgen -W "--install --update" -- "$cur")
         else
             mapfile -t COMPREPLY < <(compgen -d -- "$cur")
         fi
@@ -496,7 +557,7 @@ if [[ $- == *i* ]]; then
 
         COMPREPLY=()
         if (( COMP_CWORD == 1 )); then
-            mapfile -t COMPREPLY < <(compgen -W "--install" -- "$cur")
+            mapfile -t COMPREPLY < <(compgen -W "--install --update" -- "$cur")
         fi
     }
 
@@ -506,10 +567,18 @@ fi
 
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    if [[ "${1:-}" == "--install" && $# -eq 1 ]]; then
-        _cc_install
-    else
-        echo "Usage: $0 --install" >&2
-        exit 1
-    fi
+    case "${1:-}" in
+        --install)
+            (( $# == 1 )) || { echo "Usage: $0 --install" >&2; exit 1; }
+            _cc_install
+            ;;
+        --update)
+            (( $# == 1 )) || { echo "Usage: $0 --update" >&2; exit 1; }
+            _cc_update
+            ;;
+        *)
+            echo "Usage: $0 --install | --update" >&2
+            exit 1
+            ;;
+    esac
 fi
