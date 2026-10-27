@@ -377,9 +377,29 @@ _add_workspace() {
 }
 
 _remove_workspace() {
-    local target="$1"
-    local remove_path="" existing tmp
+    local target="${1:-}"
+    local remove_path="" existing tmp selected
     local -a remaining=()
+
+    if [[ -z "$target" ]]; then
+        if (( ${#workspaces[@]} == 0 )); then
+            echo "No workspaces defined." >&2
+            return 1
+        fi
+        selected=$(
+            for existing in "${workspaces[@]}"; do
+                printf '%s\t%s\n' "${workspace_names["$existing"]}" "$existing"
+            done |
+                fzf --height "$(( ${#workspaces[@]} + 2 ))" \
+                    --delimiter=$'\t' --with-nth=1,2 \
+                    --prompt="Remove workspace: "
+        )
+        [[ -n "$selected" ]] || {
+            echo "No workspace selected"
+            return 1
+        }
+        target="${selected#*$'\t'}"
+    fi
 
     if [[ -d "$target" ]]; then
         target=$(realpath "$target") || return 1
@@ -464,14 +484,10 @@ _cc_workspace() {
             _add_workspace "$path" "$name"
             ;;
         remove)
-            if [[ -z "$path" ]]; then
-                echo "Usage: cc --ws remove <path-or-name>"
-                return 1
-            fi
             _remove_workspace "$path"
             ;;
         *)
-            echo "Usage: cc --ws add <directory> [name] | cc --ws remove <path-or-name> | cc --ws -"
+            echo "Usage: cc --ws add <directory> [name] | cc --ws remove [path-or-name] | cc --ws -"
             return 1
             ;;
     esac
