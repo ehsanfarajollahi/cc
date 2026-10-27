@@ -232,7 +232,7 @@ _cc_update() {
 
     read -r current_checksum ignored ignored < <(cksum "$source_path")
     read -r downloaded_checksum ignored ignored < <(cksum "$tmp")
-    echo "(checksum $downloaded_checksum) Downloaded cc.sh from GitHub commit ${commit_sha:0:12}."
+    echo "Downloaded cc.sh from GitHub commit ${commit_sha:0:12} (checksum $downloaded_checksum)."
     if cmp -s "$source_path" "$tmp"; then
         rm -f "$tmp"
         echo "Result: no changes; the current cc.sh matches the download."
